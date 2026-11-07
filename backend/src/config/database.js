@@ -1,3 +1,6 @@
+import dns from "node:dns";
+dns.setServers(["8.8.8.8", "1.1.1.1"]); // usa los DNS de Google y Cloudflare solo para esta app
+
 import mongoose from "mongoose";
 
 const connectDB = async () => {
