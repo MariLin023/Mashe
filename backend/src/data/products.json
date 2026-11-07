@@ -1,0 +1,444 @@
+[
+  {
+    "id": 1,
+    "name": "Óleos",
+    "price": 20000,
+    "cat": "arte",
+    "type": "Óleos",
+    "brand": "Artel",
+    "stock": 25,
+    "best": true,
+    "image": "img/oleos.jpg",
+    "desc": "Tubos de pintura al óleo de alta pigmentación, con secado lento que permite mezclar y corregir con calma. Ideales para estudiantes y artistas.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "Set de 6 tubos de 12 ml"
+      },
+      {
+        "label": "Acabado",
+        "value": "Satinado"
+      },
+      {
+        "label": "Uso",
+        "value": "Lienzo y tabla"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Acrílicos",
+    "price": 18000,
+    "cat": "arte",
+    "type": "Acrílicos",
+    "brand": "Pinturas Alyamex",
+    "stock": 40,
+    "best": true,
+    "image": "img/acrilicos.jpg",
+    "desc": "Pintura acrílica de secado rápido y colores intensos. Se diluye con agua y resiste bien el paso del tiempo.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "Set de 12 frascos"
+      },
+      {
+        "label": "Base",
+        "value": "Agua"
+      },
+      {
+        "label": "Uso",
+        "value": "Lienzo, madera y papel grueso"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Marcadores de colores",
+    "price": 42000,
+    "cat": "arte",
+    "type": "Marcadores",
+    "brand": "Dual Tip",
+    "stock": 12,
+    "best": true,
+    "image": "img/marcadores.jpg",
+    "desc": "Marcadores de doble punta (fina y pincel) con tinta a base de alcohol. Colores vivos para ilustración, lettering y bocetos.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "Set de 24 colores"
+      },
+      {
+        "label": "Punta",
+        "value": "Doble: fina y pincel"
+      },
+      {
+        "label": "Tinta",
+        "value": "Base alcohol"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Lienzos",
+    "price": 35000,
+    "cat": "arte",
+    "type": "Lienzos",
+    "brand": "Artel",
+    "stock": 18,
+    "best": true,
+    "image": "img/lienzos.jpg",
+    "desc": "Lienzos de algodón imprimados, listos para pintar. Bastidor de madera resistente y tela bien tensada.",
+    "specs": [
+      {
+        "label": "Medida",
+        "value": "30 x 40 cm"
+      },
+      {
+        "label": "Material",
+        "value": "Algodón y madera de pino"
+      },
+      {
+        "label": "Imprimación",
+        "value": "Gesso acrílico"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Aceite de linaza",
+    "price": 16000,
+    "cat": "arte",
+    "type": "Medios, solventes, aceites y barnices",
+    "brand": "Winsor",
+    "stock": 9,
+    "best": true,
+    "image": "img/aceite.jpg",
+    "desc": "Aceite de linaza refinado para diluir pintura al óleo, dar fluidez y aumentar el brillo de la capa.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "120 ml"
+      },
+      {
+        "label": "Uso",
+        "value": "Medio para óleo"
+      },
+      {
+        "label": "Secado",
+        "value": "Lento"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Lápices de grafito",
+    "price": 15000,
+    "cat": "arte",
+    "type": "Lápices",
+    "brand": "Faber",
+    "stock": 60,
+    "best": false,
+    "image": "img/lapices.jpg",
+    "desc": "Lápices de grafito en distintas durezas, para dibujo técnico, sombreado y bocetos.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "Caja de 12 (2H a 8B)"
+      },
+      {
+        "label": "Cuerpo",
+        "value": "Madera"
+      },
+      {
+        "label": "Uso",
+        "value": "Dibujo y sombreado"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Brochas",
+    "price": 35000,
+    "cat": "arte",
+    "type": "Brochas",
+    "brand": "Artel",
+    "stock": 14,
+    "best": false,
+    "image": "img/brochas.jpg",
+    "desc": "Brochas de cerda suave en cuatro tamaños. Útiles para fondos, barnices y pintura de superficies grandes.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "Set de 4 brochas"
+      },
+      {
+        "label": "Cerda",
+        "value": "Natural"
+      },
+      {
+        "label": "Mango",
+        "value": "Madera"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Aerosoles",
+    "price": 18000,
+    "cat": "arte",
+    "type": "Aerosoles",
+    "brand": "Pinturas Alyamex",
+    "stock": 30,
+    "best": false,
+    "image": "img/aerosoles.jpg",
+    "desc": "Pintura en aerosol de secado rápido y buena cobertura, para murales, grafiti y manualidades.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "Lata de 400 ml"
+      },
+      {
+        "label": "Acabado",
+        "value": "Brillante"
+      },
+      {
+        "label": "Secado",
+        "value": "Al tacto en 15 min"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Barniz brillante",
+    "price": 27000,
+    "cat": "arte",
+    "type": "Medios, solventes, aceites y barnices",
+    "brand": "Winsor",
+    "stock": 0,
+    "best": false,
+    "image": "img/barniz.jpg",
+    "desc": "Barniz de acabado brillante para proteger y dar profundidad al color de tus obras terminadas.",
+    "specs": [
+      {
+        "label": "Contenido",
+        "value": "250 ml"
+      },
+      {
+        "label": "Acabado",
+        "value": "Brillante"
+      },
+      {
+        "label": "Uso",
+        "value": "Óleo y acrílico"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Marcadores permanentes",
+    "price": 12000,
+    "cat": "arte",
+    "type": "Marcadores",
+    "brand": "Sharpie",
+    "stock": 50,
+    "best": false,
+    "image": "img/permanentes.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 11,
+    "name": "Lienzo grande 50x70",
+    "price": 58000,
+    "cat": "arte",
+    "type": "Lienzos",
+    "brand": "Artel",
+    "stock": 6,
+    "best": false,
+    "image": "img/lienzo-grande.jpg",
+    "desc": "Lienzo de gran formato para obras de más presencia. Tela imprimada y bastidor reforzado.",
+    "specs": [
+      {
+        "label": "Medida",
+        "value": "50 x 70 cm"
+      },
+      {
+        "label": "Material",
+        "value": "Algodón y madera de pino"
+      },
+      {
+        "label": "Imprimación",
+        "value": "Gesso acrílico"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Paleta de mezcla",
+    "price": 9000,
+    "cat": "arte",
+    "type": "Accesorios",
+    "brand": "Artel",
+    "stock": 22,
+    "best": false,
+    "image": "img/paleta.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 20,
+    "name": "Resma de papel carta",
+    "price": 22000,
+    "cat": "oficina",
+    "type": "Papelería",
+    "brand": "Reprograf",
+    "stock": 80,
+    "best": false,
+    "image": "img/resma.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 21,
+    "name": "Bolígrafos x12",
+    "price": 14000,
+    "cat": "oficina",
+    "type": "Escritura",
+    "brand": "Bic",
+    "stock": 70,
+    "best": false,
+    "image": "img/boligrafos.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 22,
+    "name": "Carpetas archivadoras",
+    "price": 19000,
+    "cat": "oficina",
+    "type": "Archivo",
+    "brand": "Acco",
+    "stock": 35,
+    "best": false,
+    "image": "img/carpetas.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 23,
+    "name": "Grapadora metálica",
+    "price": 26000,
+    "cat": "oficina",
+    "type": "Accesorios",
+    "brand": "Rapid",
+    "stock": 0,
+    "best": false,
+    "image": "img/grapadora.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 24,
+    "name": "Notas adhesivas",
+    "price": 8000,
+    "cat": "oficina",
+    "type": "Papelería",
+    "brand": "Post-it",
+    "stock": 90,
+    "best": false,
+    "image": "img/notas.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 25,
+    "name": "Resaltadores x6",
+    "price": 17000,
+    "cat": "oficina",
+    "type": "Escritura",
+    "brand": "Stabilo",
+    "stock": 44,
+    "best": false,
+    "image": "img/resaltadores.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 30,
+    "name": "Cuaderno cuadriculado",
+    "price": 7000,
+    "cat": "escolares",
+    "type": "Cuadernos",
+    "brand": "Norma",
+    "stock": 120,
+    "best": false,
+    "image": "img/cuaderno.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 31,
+    "name": "Colores x24",
+    "price": 24000,
+    "cat": "escolares",
+    "type": "Colores y lápices",
+    "brand": "Faber",
+    "stock": 48,
+    "best": false,
+    "image": "img/colores.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 32,
+    "name": "Kit de geometría",
+    "price": 13000,
+    "cat": "escolares",
+    "type": "Geometría",
+    "brand": "Pelikan",
+    "stock": 30,
+    "best": false,
+    "image": "img/geometria.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 33,
+    "name": "Morral escolar",
+    "price": 85000,
+    "cat": "escolares",
+    "type": "Morrales",
+    "brand": "Totto",
+    "stock": 8,
+    "best": false,
+    "image": "img/morral.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 34,
+    "name": "Témperas x12",
+    "price": 21000,
+    "cat": "escolares",
+    "type": "Pintura escolar",
+    "brand": "Pelikan",
+    "stock": 0,
+    "best": false,
+    "image": "img/temperas.jpg",
+    "desc": "",
+    "specs": []
+  },
+  {
+    "id": 35,
+    "name": "Pegante en barra",
+    "price": 5000,
+    "cat": "escolares",
+    "type": "Pegantes",
+    "brand": "Pritt",
+    "stock": 100,
+    "best": false,
+    "image": "img/pegante.jpg",
+    "desc": "",
+    "specs": []
+  }
+]
