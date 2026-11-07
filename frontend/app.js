@@ -4,52 +4,42 @@
    preguntas frecuentes, carrito lateral, pago y confirmación.
    ===================================================================== */
 
-/* ---------- 1. DATOS (edita aquí tus productos) ---------- */
-// cat: arte | oficina | escolares      type: subcategoría usada en los filtros
-// stock: unidades disponibles (0 = agotado)      best: aparece en "Los más vendidos"
-const PRODUCTS = [
-  { id: 1,  name: "Óleos",                price: 20000, cat: "arte",      type: "Óleos",              brand: "Artel",    stock: 25, best: true,  image: "img/oleos.jpg" },
-  { id: 2,  name: "Acrílicos",            price: 18000, cat: "arte",      type: "Acrílicos",          brand: "Pinturas Alyamex", stock: 40, best: true, image: "img/acrilicos.jpg" },
-  { id: 3,  name: "Marcadores de colores",price: 42000, cat: "arte",      type: "Marcadores",         brand: "Dual Tip", stock: 12, best: true,  image: "img/marcadores.jpg" },
-  { id: 4,  name: "Lienzos",              price: 35000, cat: "arte",      type: "Lienzos",            brand: "Artel",    stock: 18, best: true,  image: "img/lienzos.jpg" },
-  { id: 5,  name: "Aceite de linaza",     price: 16000, cat: "arte",      type: "Medios, solventes, aceites y barnices", brand: "Winsor",   stock: 9,  best: true,  image: "img/aceite.jpg" },
-  { id: 6,  name: "Lápices de grafito",   price: 15000, cat: "arte",      type: "Lápices",            brand: "Faber",    stock: 60, best: false, image: "img/lapices.jpg" },
-  { id: 7,  name: "Brochas",              price: 35000, cat: "arte",      type: "Brochas",            brand: "Artel",    stock: 14, best: false, image: "img/brochas.jpg" },
-  { id: 8,  name: "Aerosoles",            price: 18000, cat: "arte",      type: "Aerosoles",          brand: "Pinturas Alyamex", stock: 30, best: false, image: "img/aerosoles.jpg" },
-  { id: 9,  name: "Barniz brillante",     price: 27000, cat: "arte",      type: "Medios, solventes, aceites y barnices", brand: "Winsor",   stock: 0,  best: false, image: "img/barniz.jpg" },
-  { id: 10, name: "Marcadores permanentes",price: 12000,cat: "arte",      type: "Marcadores",         brand: "Sharpie",  stock: 50, best: false, image: "img/permanentes.jpg" },
-  { id: 11, name: "Lienzo grande 50x70",  price: 58000, cat: "arte",      type: "Lienzos",            brand: "Artel",    stock: 6,  best: false, image: "img/lienzo-grande.jpg" },
-  { id: 12, name: "Paleta de mezcla",     price: 9000,  cat: "arte",      type: "Accesorios",         brand: "Artel",    stock: 22, best: false, image: "img/paleta.jpg" },
+/* ---------- 1. DATOS Y CONEXIÓN CON LA API ---------- */
+// URL del backend. En producción cámbiala por la dirección donde publiques la API.
+const API = "http://localhost:4000/api/v1";
 
-  { id: 20, name: "Resma de papel carta", price: 22000, cat: "oficina",   type: "Papelería",          brand: "Reprograf",stock: 80, best: false, image: "img/resma.jpg" },
-  { id: 21, name: "Bolígrafos x12",       price: 14000, cat: "oficina",   type: "Escritura",          brand: "Bic",      stock: 70, best: false, image: "img/boligrafos.jpg" },
-  { id: 22, name: "Carpetas archivadoras",price: 19000, cat: "oficina",   type: "Archivo",            brand: "Acco",     stock: 35, best: false, image: "img/carpetas.jpg" },
-  { id: 23, name: "Grapadora metálica",   price: 26000, cat: "oficina",   type: "Accesorios",         brand: "Rapid",    stock: 0,  best: false, image: "img/grapadora.jpg" },
-  { id: 24, name: "Notas adhesivas",      price: 8000,  cat: "oficina",   type: "Papelería",          brand: "Post-it",  stock: 90, best: false, image: "img/notas.jpg" },
-  { id: 25, name: "Resaltadores x6",      price: 17000, cat: "oficina",   type: "Escritura",          brand: "Stabilo",  stock: 44, best: false, image: "img/resaltadores.jpg" },
+// Los productos ya no se escriben aquí: vienen de la base de datos (GET /products)
+let PRODUCTS = [];
+const DETAILS = {}; // se llena en loadProducts() con desc y specs de cada producto
 
-  { id: 30, name: "Cuaderno cuadriculado",price: 7000,  cat: "escolares", type: "Cuadernos",          brand: "Norma",    stock: 120,best: false, image: "img/cuaderno.jpg" },
-  { id: 31, name: "Colores x24",          price: 24000, cat: "escolares", type: "Colores y lápices",  brand: "Faber",    stock: 48, best: false, image: "img/colores.jpg" },
-  { id: 32, name: "Kit de geometría",     price: 13000, cat: "escolares", type: "Geometría",          brand: "Pelikan",  stock: 30, best: false, image: "img/geometria.jpg" },
-  { id: 33, name: "Morral escolar",       price: 85000, cat: "escolares", type: "Morrales",           brand: "Totto",    stock: 8,  best: false, image: "img/morral.jpg" },
-  { id: 34, name: "Témperas x12",         price: 21000, cat: "escolares", type: "Pintura escolar",    brand: "Pelikan",  stock: 0,  best: false, image: "img/temperas.jpg" },
-  { id: 35, name: "Pegante en barra",     price: 5000,  cat: "escolares", type: "Pegantes",           brand: "Pritt",    stock: 100,best: false, image: "img/pegante.jpg" },
-];
+async function api(path, { method = "GET", body } = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (user && user.token) headers.Authorization = `Bearer ${user.token}`;
+  let res;
+  try {
+    res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  } catch {
+    throw new Error("No pudimos conectar con el servidor. Intenta de nuevo.");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.message || "Ocurrió un error. Intenta de nuevo.");
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
 
-
-// Descripción y ficha técnica de cada producto (por id). Si falta alguno, se genera un texto básico.
-const DETAILS = {
-  1:  { desc: "Tubos de pintura al óleo de alta pigmentación, con secado lento que permite mezclar y corregir con calma. Ideales para estudiantes y artistas.", specs: [["Contenido", "Set de 6 tubos de 12 ml"], ["Acabado", "Satinado"], ["Uso", "Lienzo y tabla"]] },
-  2:  { desc: "Pintura acrílica de secado rápido y colores intensos. Se diluye con agua y resiste bien el paso del tiempo.", specs: [["Contenido", "Set de 12 frascos"], ["Base", "Agua"], ["Uso", "Lienzo, madera y papel grueso"]] },
-  3:  { desc: "Marcadores de doble punta (fina y pincel) con tinta a base de alcohol. Colores vivos para ilustración, lettering y bocetos.", specs: [["Contenido", "Set de 24 colores"], ["Punta", "Doble: fina y pincel"], ["Tinta", "Base alcohol"]] },
-  4:  { desc: "Lienzos de algodón imprimados, listos para pintar. Bastidor de madera resistente y tela bien tensada.", specs: [["Medida", "30 x 40 cm"], ["Material", "Algodón y madera de pino"], ["Imprimación", "Gesso acrílico"]] },
-  5:  { desc: "Aceite de linaza refinado para diluir pintura al óleo, dar fluidez y aumentar el brillo de la capa.", specs: [["Contenido", "120 ml"], ["Uso", "Medio para óleo"], ["Secado", "Lento"]] },
-  6:  { desc: "Lápices de grafito en distintas durezas, para dibujo técnico, sombreado y bocetos.", specs: [["Contenido", "Caja de 12 (2H a 8B)"], ["Cuerpo", "Madera"], ["Uso", "Dibujo y sombreado"]] },
-  7:  { desc: "Brochas de cerda suave en cuatro tamaños. Útiles para fondos, barnices y pintura de superficies grandes.", specs: [["Contenido", "Set de 4 brochas"], ["Cerda", "Natural"], ["Mango", "Madera"]] },
-  8:  { desc: "Pintura en aerosol de secado rápido y buena cobertura, para murales, grafiti y manualidades.", specs: [["Contenido", "Lata de 400 ml"], ["Acabado", "Brillante"], ["Secado", "Al tacto en 15 min"]] },
-  9:  { desc: "Barniz de acabado brillante para proteger y dar profundidad al color de tus obras terminadas.", specs: [["Contenido", "250 ml"], ["Acabado", "Brillante"], ["Uso", "Óleo y acrílico"]] },
-  11: { desc: "Lienzo de gran formato para obras de más presencia. Tela imprimada y bastidor reforzado.", specs: [["Medida", "50 x 70 cm"], ["Material", "Algodón y madera de pino"], ["Imprimación", "Gesso acrílico"]] },
-};
+async function loadProducts() {
+  const { products } = await api("/products");
+  PRODUCTS = products;
+  products.forEach((p) => {
+    DETAILS[p.id] = { desc: p.desc, specs: (p.specs || []).map((s) => [s.label, s.value]) };
+  });
+  // Limpia carritos viejos si un producto ya no existe o cambió el stock
+  cart = cart.filter((l) => productById(l.id) && productById(l.id).stock > 0).map((l) => ({ ...l, qty: Math.min(l.qty, productById(l.id).stock) }));
+  save("mashe_cart", cart);
+}
 
 const CATEGORIES = { arte: "Arte", oficina: "Oficina", escolares: "Escolares" };
 
@@ -143,9 +133,6 @@ function removeFromCart(id) {
   if (currentRoute === "pago") renderCheckout();
 }
 function clearCart() { cart = []; persistCart(); if (currentRoute === "pago") navigate("#/inicio"); }
-
-// Limpia carritos viejos si un producto ya no existe o cambió el stock
-cart = cart.filter((l) => productById(l.id) && productById(l.id).stock > 0).map((l) => ({ ...l, qty: Math.min(l.qty, productById(l.id).stock) }));
 
 /* ---------- 4. ELEMENTOS FIJOS DE LA PÁGINA ---------- */
 const app = $("#app");
@@ -290,6 +277,12 @@ function viewAuth(mode) {
           <label for="email">Correo electrónico</label>
           <div class="field-row">
             <input id="email" name="email" type="email" autocomplete="email" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <div class="field-row">
+            <input id="password" name="password" type="password" autocomplete="${isLogin ? "current-password" : "new-password"}" required>
             <button type="submit" aria-label="Continuar">→</button>
           </div>
         </div>
@@ -301,22 +294,34 @@ function viewAuth(mode) {
       <a class="auth-back" href="#/bienvenida">Volver</a>
     </section>`;
 
-  function finish(name, email) {
-    user = { name, email };
+  function finish(name, email, token) {
+    user = { name, email, token };
     save("mashe_user", user);
     navigate("#/inicio");
   }
   // DEMO: sesión simulada. Para producción conecta Firebase Auth, Supabase u otro backend.
   $("#google-btn").addEventListener("click", () => finish("Invitado", "invitado@gmail.com"));
-  $("#auth-form").addEventListener("submit", (e) => {
+  $("#auth-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#email").value.trim();
+    const password = $("#password").value;
     const nameInput = $("#name");
-    const name = nameInput ? nameInput.value.trim() : email.split("@")[0];
+    const name = nameInput ? nameInput.value.trim() : "";
     const err = $("#auth-error");
     if (nameInput && !name) { err.textContent = "Escribe tu nombre."; nameInput.focus(); return; }
     if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = "Escribe un correo válido, por ejemplo nombre@correo.com."; $("#email").focus(); return; }
-    finish(name, email);
+    if (password.length < 6) { err.textContent = "La contraseña debe tener al menos 6 caracteres."; $("#password").focus(); return; }
+
+    err.textContent = "";
+    try {
+      const data = await api(isLogin ? "/users/login" : "/users/register", {
+        method: "POST",
+        body: isLogin ? { email, password } : { name, email, password },
+      });
+      finish(data.user.name, data.user.email, data.token);
+    } catch (error) {
+      err.textContent = error.message;
+    }
   });
 }
 
@@ -592,7 +597,7 @@ function renderCheckout() {
     if (b) changeQty(Number(b.dataset.id), b.dataset.q === "mas" ? 1 : -1);
   });
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(form));
     const err = $("#checkout-error");
@@ -610,23 +615,33 @@ function renderCheckout() {
       if (!/^\d{3,4}$/.test($("#c-cvv").value.trim())) return fail("El CVV tiene 3 o 4 dígitos.", "c-cvv");
     }
 
-    const order = {
-      id: "M" + Date.now().toString().slice(-8),
-      date: new Date().toISOString(),
-      customer: { name: d.name.trim(), email: d.email.trim(), phone: d.phone.trim(), address: d.address.trim(), city: d.city.trim(), notes: (d.notes || "").trim() },
-      pay: d.pay,
-      items: cart.map((l) => ({ id: l.id, name: productById(l.id).name, price: productById(l.id).price, qty: l.qty })),
-      subtotal: sub, shipping: ship, total: sub + ship,
-    };
-    const orders = store("mashe_orders", []);
-    orders.push(order);
-    save("mashe_orders", orders);
+    // El precio, el envío y el stock los calcula el servidor. La tarjeta es solo una validación visual:
+    // sus datos nunca salen del navegador.
+    const btn = form.querySelector('[type="submit"]');
+    if (btn) btn.disabled = true;
+    err.textContent = "";
+    try {
+      const { order } = await api("/orders", {
+        method: "POST",
+        body: {
+          items: cart.map((l) => ({ id: l.id, qty: l.qty })),
+          customer: { name: d.name.trim(), email: d.email.trim(), phone: d.phone.trim(), address: d.address.trim(), city: d.city.trim(), notes: (d.notes || "").trim() },
+          pay: d.pay,
+        },
+      });
+      const orders = store("mashe_orders", []);
+      orders.push(order);
+      save("mashe_orders", orders);
 
-    // Descuenta el stock en memoria (en una tienda real esto lo hace el servidor)
-    order.items.forEach((it) => { const p = productById(it.id); p.stock = Math.max(0, p.stock - it.qty); });
-    cart = [];
-    persistCart();
-    navigate("#/confirmacion/" + order.id);
+      cart = [];
+      persistCart();
+      loadProducts().catch(() => {}); // refresca el stock que ve el cliente
+      navigate("#/confirmacion/" + order.id);
+    } catch (error) {
+      err.textContent = error.message;
+      if (error.status === 409) { loadProducts().then(persistCart).catch(() => {}); } // el stock cambió
+      if (btn) btn.disabled = false;
+    }
   });
 }
 
@@ -716,4 +731,13 @@ document.addEventListener("click", (e) => {
 });
 
 window.addEventListener("hashchange", route);
-route();
+
+(async function init() {
+  try {
+    await loadProducts();
+  } catch (error) {
+    $("#app").innerHTML = `<section class="view faq"><h1>No pudimos cargar los productos</h1><p>${esc(error.message)}</p><p>Revisa que el servidor esté encendido y recarga la página.</p></section>`;
+    return;
+  }
+  route();
+})();
