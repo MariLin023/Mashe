@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MASHE – Todos tus materiales en un solo lugar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500&family=Alegreya+Sans:wght@500;700&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Cabecera (se oculta en bienvenida / login / registro) -->
+  <header class="site-header" id="site-header" hidden>
+    <a class="logo" href="#/inicio" aria-label="MASHE, ir al inicio">MASHE</a>
+
+    <form class="search" id="search-form" role="search">
+      <input type="search" id="search-input" placeholder="Busca tu marca o producto" aria-label="Buscar productos">
+      <button type="submit" aria-label="Buscar">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#b44fd6" stroke-width="1.6"><circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="4" stroke="#e0508f"/><path d="M15 15l5.5 5.5" stroke="#e0508f" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </form>
+
+    <div class="header-actions">
+      <span class="user-chip" id="user-chip" hidden></span>
+      <button class="cart-btn" id="cart-btn" aria-label="Abrir carrito">
+        <svg width="46" height="46" viewBox="0 0 32 32" fill="none" stroke="#5b21b6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M2 5h4l3 14h14l3-10H8"/><circle cx="12" cy="25" r="2"/><circle cx="21" cy="25" r="2"/>
+          <rect x="14" y="2" width="8" height="8" rx="1"/><path d="M16 6h4"/>
+        </svg>
+        <span class="cart-count" id="cart-count">0</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="site-nav" id="site-nav" hidden aria-label="Categorías">
+    <a href="#/catalogo/arte" data-nav="arte">Arte</a>
+    <a href="#/catalogo/oficina" data-nav="oficina">Oficina</a>
+    <a href="#/catalogo/escolares" data-nav="escolares">Escolares</a>
+    <a href="#/faq" data-nav="faq">Preguntas frecuentes</a>
+  </nav>
+
+  <!-- Aquí app.js dibuja cada pantalla -->
+  <main id="app"></main>
+
+  <!-- Carrito lateral -->
+  <div class="overlay" id="overlay" hidden></div>
+  <aside class="drawer" id="drawer" aria-label="Carrito de compras" aria-hidden="true">
+    <div class="drawer__head">
+      <h2>Tu carrito</h2>
+      <button id="drawer-close" aria-label="Cerrar carrito">✕</button>
+    </div>
+    <div class="drawer__body" id="drawer-body"></div>
+    <div class="drawer__foot" id="drawer-foot"></div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
