@@ -1,16 +1,24 @@
 import jwt from "jsonwebtoken";
+import { crearUsuario } from "../domain/fabricaUsuario.js";
+import { ErrorNoAutenticado, ErrorSinPermiso } from "../domain/errores.js";
 
-const readToken = (req) => {
+const leerToken = (req) => {
     const header = req.headers.authorization || "";
     return header.startsWith("Bearer ") ? header.slice(7) : null;
 };
 
-// Si trae token válido, llena req.user; si no, deja pasar (compra como invitado)
+// Del token reconstruye el objeto de la clase correcta (Cliente o Administrador)
+const usuarioDelToken = (token) => {
+    const datos = jwt.verify(token, process.env.JWT_SECRET);
+    return crearUsuario({ id: datos.id, nombre: datos.nombre, correo: datos.correo, rol: datos.rol });
+};
+
+// Con token válido llena req.usuario; si no, deja pasar (compra como invitado)
 export const optionalAuth = (req, _res, next) => {
-    const token = readToken(req);
+    const token = leerToken(req);
     if (token) {
         try {
-            req.user = jwt.verify(token, process.env.JWT_SECRET);
+            req.usuario = usuarioDelToken(token);
         } catch {
             // token vencido o falso: se trata como invitado
         }
@@ -18,18 +26,19 @@ export const optionalAuth = (req, _res, next) => {
     next();
 };
 
-export const requireAuth = (req, res, next) => {
-    const token = readToken(req);
-    if (!token) return res.status(401).json({ message: "Inicia sesión para continuar" });
+export const requireAuth = (req, _res, next) => {
+    const token = leerToken(req);
+    if (!token) return next(new ErrorNoAutenticado());
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        req.usuario = usuarioDelToken(token);
         next();
     } catch {
-        res.status(401).json({ message: "Tu sesión no es válida o ya venció" });
+        next(new ErrorNoAutenticado("Tu sesión no es válida o ya venció"));
     }
 };
 
-export const requireRole = (role) => (req, res, next) => {
-    if (req.user?.role === role) return next();
-    res.status(403).json({ message: "No tienes permiso para hacer esto" });
+// POLIMORFISMO en acción: pregunta usuario.puede(...) sin importar si es Cliente o Administrador
+export const requirePermiso = (accion) => (req, _res, next) => {
+    if (req.usuario?.puede(accion)) return next();
+    next(new ErrorSinPermiso());
 };

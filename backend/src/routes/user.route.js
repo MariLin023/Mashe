@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { registerUser, loginUser, getMe } from "../controllers/user.controller.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 
-const router = Router();
-
-router.route("/register").post(registerUser);
-router.route("/login").post(loginUser);
-router.route("/me").get(requireAuth, getMe);
-
-export default router;
+export default (c) => {
+    const router = Router();
+    router.route("/register").post(c.registrar);
+    router.route("/login").post(c.iniciarSesion);
+    router.route("/me").get(requireAuth, c.perfil);
+    return router;
+};

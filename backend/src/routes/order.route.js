@@ -1,11 +1,14 @@
 import { Router } from "express";
-import { createOrder, myOrders, cancelOrder } from "../controllers/order.controller.js";
-import { optionalAuth, requireAuth } from "../middlewares/auth.middleware.js";
+import { optionalAuth, requireAuth, requirePermiso } from "../middlewares/auth.middleware.js";
 
-const router = Router();
+export default (c) => {
+    const router = Router();
+    router.route("/").post(optionalAuth, c.crear); // también deja comprar como invitado
+    router.route("/mine").get(requireAuth, requirePermiso("consultar_pedidos"), c.misPedidos);
+    router.route("/:code/cancel").patch(requireAuth, requirePermiso("cancelar_pedido"), c.cancelar);
 
-router.route("/").post(optionalAuth, createOrder); // también deja comprar como invitado
-router.route("/mine").get(requireAuth, myOrders);
-router.route("/:code/cancel").patch(requireAuth, cancelOrder);
-
-export default router;
+    // Administrador
+    router.route("/").get(requireAuth, requirePermiso("gestionar_pedidos"), c.listarTodos);
+    router.route("/:code/status").patch(requireAuth, requirePermiso("gestionar_pedidos"), c.cambiarEstado);
+    return router;
+};

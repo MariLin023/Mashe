@@ -4,7 +4,6 @@ import mongoose, { Schema } from "mongoose";
 // así el pedido no cambia si después el producto sube de precio.
 const orderItemSchema = new Schema(
     {
-        product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
         productId: { type: Number, required: true },
         name: { type: String, required: true },
         price: { type: Number, required: true, min: 0 },
