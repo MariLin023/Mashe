@@ -6,6 +6,7 @@ import { Cliente } from "../domain/Cliente.js";
 import { Administrador } from "../domain/Administrador.js";
 import { crearUsuario } from "../domain/fabricaUsuario.js";
 import { Producto } from "../domain/Producto.js";
+import { Categoria } from "../domain/Categoria.js";
 import { Carrito } from "../domain/Carrito.js";
 import { DatosEntrega } from "../domain/DatosEntrega.js";
 import { Pedido } from "../domain/Pedido.js";
@@ -40,6 +41,8 @@ describe("Usuario, Cliente y Administrador (herencia + polimorfismo)", () => {
         assert.equal(c.puede("crear_pedido"), true);
         assert.equal(c.puede("gestionar_productos"), false);
         assert.equal(a.puede("gestionar_productos"), true);
+        assert.equal(a.puede("gestionar_categorias"), true);
+        assert.equal(c.puede("gestionar_categorias"), false);
         assert.equal(a.puede("crear_pedido"), false);
     });
 
@@ -88,10 +91,10 @@ describe("Producto (encapsulamiento)", () => {
         assert.throws(() => p.reservar(10), ErrorStock);
     });
 
-    test("valida precio, stock y categoría", () => {
+    test("valida precio, stock, nombre y que tenga categoría", () => {
         assert.throws(() => nuevoProducto({ precio: -1 }), ErrorValidacion);
         assert.throws(() => nuevoProducto({ stock: -3 }), ErrorValidacion);
-        assert.throws(() => nuevoProducto({ categoria: "juguetes" }), ErrorValidacion);
+        assert.throws(() => nuevoProducto({ categoria: "  " }), ErrorValidacion);
         assert.throws(() => nuevoProducto({ nombre: "  " }), ErrorValidacion);
     });
 });
@@ -205,5 +208,34 @@ describe("MetodoPago (abstracción + polimorfismo)", () => {
     test("rechazo simulado: afecta a los pagos en línea, no a contra entrega", () => {
         assert.equal(MetodoPago.crear("tarjeta").procesar(1000, { simularRechazo: true }).estado, "rechazado");
         assert.equal(MetodoPago.crear("contraentrega").procesar(1000, { simularRechazo: true }).estado, "pendiente");
+    });
+});
+
+describe("Categoria", () => {
+    test("la clave se genera desde el nombre, sin tildes ni espacios", () => {
+        assert.equal(Categoria.crearClave("Útiles Escolares"), "utiles-escolares");
+        assert.equal(Categoria.crearClave("  Arte & Diseño!  "), "arte-diseno");
+        assert.equal(new Categoria({ nombre: "Oficina" }).clave, "oficina");
+    });
+
+    test("valida nombre y descripción", () => {
+        assert.throws(() => new Categoria({ nombre: "" }), ErrorValidacion);
+        assert.throws(() => new Categoria({ nombre: "A" }), ErrorValidacion);
+        assert.throws(() => new Categoria({ nombre: "###" }), ErrorValidacion);
+        assert.throws(() => new Categoria({ nombre: "Arte", descripcion: "x".repeat(201) }), ErrorValidacion);
+    });
+
+    test("editar cambia nombre y descripción, pero la clave no cambia", () => {
+        const c = new Categoria({ nombre: "Arte", descripcion: "Pinturas" });
+        c.editar({ nombre: "Arte y pintura", descripcion: "Todo para pintar" });
+        assert.equal(c.nombre, "Arte y pintura");
+        assert.equal(c.clave, "arte");
+        assert.throws(() => { c.clave = "otra"; }, TypeError);
+    });
+
+    test("no se puede eliminar si tiene productos", () => {
+        const c = new Categoria({ nombre: "Arte" });
+        assert.throws(() => c.verificarEliminable(3), ErrorConflicto);
+        assert.doesNotThrow(() => c.verificarEliminable(0));
     });
 });

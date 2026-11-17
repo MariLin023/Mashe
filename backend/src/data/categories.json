@@ -1,0 +1,5 @@
+[
+  { "key": "arte", "name": "Arte", "description": "Pinturas, lienzos, pinceles y materiales para crear" },
+  { "key": "oficina", "name": "Oficina", "description": "Papelería y suministros para el trabajo" },
+  { "key": "escolares", "name": "Escolares", "description": "Útiles para el colegio y la universidad" }
+]

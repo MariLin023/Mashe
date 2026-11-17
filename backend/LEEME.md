@@ -10,7 +10,9 @@ La explicación de las clases, los principios de POO y la correspondencia con lo
 2. Copia `.env.example` a `.env` y llena `MONGODB_URI` y `JWT_SECRET`
 3. `npm run seed`  → carga los 24 productos del frontend en la colección `products` (solo la primera vez)
 4. `npm run dev`   → servidor en http://localhost:4000
-5. `npm test`      → 35 pruebas automáticas (no necesitan base de datos)
+5. `npm test`      → 46 pruebas automáticas (no necesitan base de datos)
+
+> Si ya tenías los productos cargados, para crear solo las 3 categorías base sin tocar los productos usa `npm run seed:categorias`.
 
 ## Estructura
 
@@ -34,6 +36,10 @@ src/
 | POST | `/users/register` | público | Crea cuenta `{ name, email, password }` y devuelve token |
 | POST | `/users/login` | público | Inicia sesión `{ email, password }` y devuelve token |
 | GET | `/users/me` | token | Datos del usuario actual |
+| GET | `/categories` | público | Lista de categorías con su cantidad de productos |
+| POST | `/categories` | administrador | Crea categoría `{ name, description }` |
+| PATCH | `/categories/:key` | administrador | Edita nombre o descripción |
+| DELETE | `/categories/:key` | administrador | Elimina (solo si no tiene productos) |
 | GET | `/products` | público | Lista (`?cat=arte`, `?best=true`) |
 | GET | `/products/:id` | público | Un producto |
 | POST | `/products` | administrador | Crea producto |
@@ -54,6 +60,7 @@ El token va en el header `Authorization: Bearer <token>`.
 - Si el pago es rechazado o falla el guardado, el stock se devuelve. Al cancelar un pedido, también.
 - Pago simulado: `tarjeta` y `pse` se aprueban; `contraentrega` queda pendiente. Para probar el rechazo, manda `"simulateReject": true` en el body (solo fuera de producción).
 - Estados: `pendiente` → `pagado` → `enviado` → `entregado`, o `cancelado` (solo antes de enviar). Transiciones inválidas devuelven 409.
+- Una categoría con productos no se puede eliminar, y un producto solo puede pertenecer a una categoría que exista.
 - Todo el que se registra queda como `cliente`; el rol `administrador` se asigna directo en la BD.
 
 ## Hacer administrador a un usuario

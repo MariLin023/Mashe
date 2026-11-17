@@ -34,6 +34,12 @@ export class ProductoRepository {
         return docs.map(aDominio);
     }
 
+    // { arte: 12, oficina: 7, ... }  (las categorías sin productos no aparecen)
+    async contarPorCategoria() {
+        const filas = await Product.aggregate([{ $group: { _id: "$cat", total: { $sum: 1 } } }]);
+        return Object.fromEntries(filas.map((f) => [f._id, f.total]));
+    }
+
     async siguienteId() {
         const ultimo = await Product.findOne().sort({ id: -1 }).lean();
         return ultimo ? ultimo.id + 1 : 1;

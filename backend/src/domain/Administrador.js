@@ -3,6 +3,7 @@ import { Usuario } from "./Usuario.js";
 const PERMISOS = Object.freeze([
     "consultar_catalogo",
     "gestionar_productos",
+    "gestionar_categorias",
     "gestionar_inventario",
     "gestionar_pedidos"
 ]);

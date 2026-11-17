@@ -1,7 +1,5 @@
 import { ErrorValidacion, ErrorStock } from "./errores.js";
 
-export const CATEGORIAS = Object.freeze(["arte", "oficina", "escolares"]);
-
 // ENCAPSULAMIENTO: precio y stock son privados. Nadie puede hacer `producto.stock = -5`;
 // solo se cambian con métodos que validan la regla (el stock nunca baja de cero).
 export class Producto {
@@ -28,9 +26,9 @@ export class Producto {
         if (nombre !== undefined || this.nombre === undefined) this.nombre = pedir(nombre, "El nombre del producto es obligatorio");
         if (tipo !== undefined || this.tipo === undefined) this.tipo = pedir(tipo, "El tipo del producto es obligatorio");
         if (marca !== undefined || this.marca === undefined) this.marca = pedir(marca, "La marca del producto es obligatoria");
+        // La categoría es la "clave" de una Categoria (ej. "arte"). Que exista en la BD lo valida ProductoService.
         if (categoria !== undefined || this.categoria === undefined) {
-            if (!CATEGORIAS.includes(categoria)) throw new ErrorValidacion("Categoría inválida");
-            this.categoria = categoria;
+            this.categoria = pedir(categoria, "La categoría del producto es obligatoria").toLowerCase();
         }
         if (destacado !== undefined) this.destacado = Boolean(destacado);
         else this.destacado ??= false;

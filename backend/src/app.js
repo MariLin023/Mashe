@@ -5,6 +5,7 @@ import { controllers } from "./container.js";
 import rutasUsuario from "./routes/user.route.js";
 import rutasProducto from "./routes/product.route.js";
 import rutasPedido from "./routes/order.route.js";
+import rutasCategoria from "./routes/category.route.js";
 import { ErrorDeNegocio } from "./domain/errores.js";
 
 const app = express(); // create an express app
@@ -15,6 +16,7 @@ app.use(express.json());
 app.get("/api/v1/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/v1/users", rutasUsuario(controllers.usuario));
 app.use("/api/v1/products", rutasProducto(controllers.producto));
+app.use("/api/v1/categories", rutasCategoria(controllers.categoria));
 app.use("/api/v1/orders", rutasPedido(controllers.pedido));
 
 // Ruta que no existe

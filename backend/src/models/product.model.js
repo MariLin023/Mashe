@@ -6,7 +6,7 @@ const productSchema = new Schema(
         id: { type: Number, required: true, unique: true },
         name: { type: String, required: true, trim: true },
         price: { type: Number, required: true, min: 0 },
-        cat: { type: String, required: true, enum: ["arte", "oficina", "escolares"] },
+        cat: { type: String, required: true, trim: true, lowercase: true }, // clave de una Category
         type: { type: String, required: true, trim: true },
         brand: { type: String, required: true, trim: true },
         stock: { type: Number, required: true, min: 0, default: 0 },

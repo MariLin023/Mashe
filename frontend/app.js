@@ -31,8 +31,12 @@ async function api(path, { method = "GET", body } = {}) {
 }
 
 async function loadProducts() {
-  const { products } = await api("/products");
+  const [{ products }, cats] = await Promise.all([api("/products"), api("/categories").catch(() => null)]);
   PRODUCTS = products;
+  if (cats && cats.categories.length) { // las categorías vienen de la base de datos
+    Object.keys(CATEGORIES).forEach((k) => delete CATEGORIES[k]);
+    cats.categories.forEach((c) => { CATEGORIES[c.key] = c.name; });
+  }
   products.forEach((p) => {
     DETAILS[p.id] = { desc: p.desc, specs: (p.specs || []).map((s) => [s.label, s.value]) };
   });
@@ -41,7 +45,9 @@ async function loadProducts() {
   save("mashe_cart", cart);
 }
 
+// Valores por defecto; loadProducts() los reemplaza por las categorías de la base de datos
 const CATEGORIES = { arte: "Arte", oficina: "Oficina", escolares: "Escolares" };
+const catName = (key) => CATEGORIES[key] || key;
 
 // Tarjetas de "¿Qué estás buscando?" (type debe coincidir con el campo type de PRODUCTS)
 const HOME_TILES = [
@@ -153,9 +159,15 @@ function toast(msg) {
 
 function renderCartBadge() { $("#cart-count").textContent = cartCount(); }
 
+// El menú de categorías se arma con las que existen en la base de datos
+function renderNav() {
+  nav.innerHTML = Object.entries(CATEGORIES).map(([k, n]) => `<a href="#/catalogo/${esc(k)}" data-nav="${esc(k)}">${esc(n)}</a>`).join("")
+    + `<a href="#/faq" data-nav="faq">Preguntas frecuentes</a>`;
+}
+
 function renderHeaderUser() {
   const chip = $("#user-chip");
-  if (user) { chip.hidden = false; chip.innerHTML = `Hola, ${esc(user.name)} · <a href="#/bienvenida" id="logout" style="text-decoration:underline">Salir</a>`; }
+  if (user) { chip.hidden = false; chip.innerHTML = `Hola, ${esc(user.name)} · ${isAdmin() ? `<a href="#/admin" style="text-decoration:underline">Administrar</a> · ` : user.token ? `<a href="#/pedidos" style="text-decoration:underline">Mis pedidos</a> · ` : ""}<a href="#/bienvenida" id="logout" style="text-decoration:underline">Salir</a>`; }
   else chip.hidden = true;
 }
 
@@ -294,8 +306,8 @@ function viewAuth(mode) {
       <a class="auth-back" href="#/bienvenida">Volver</a>
     </section>`;
 
-  function finish(name, email, token) {
-    user = { name, email, token };
+  function finish(name, email, token, role) {
+    user = { name, email, token, role };
     save("mashe_user", user);
     navigate("#/inicio");
   }
@@ -318,7 +330,7 @@ function viewAuth(mode) {
         method: "POST",
         body: isLogin ? { email, password } : { name, email, password },
       });
-      finish(data.user.name, data.user.email, data.token);
+      finish(data.user.name, data.user.email, data.token, data.user.role);
     } catch (error) {
       err.textContent = error.message;
     }
@@ -449,10 +461,10 @@ function viewProduct(id) {
   if (!p) { app.innerHTML = `<section class="view faq"><h1>Producto no encontrado</h1><p>Ese producto no existe o ya no está disponible.</p><a class="auth-back" href="#/inicio">Volver al inicio</a></section>`; return; }
 
   const info = DETAILS[p.id] || {
-    desc: `${p.name} de la marca ${p.brand}. Un producto de ${p.type.toLowerCase()} de nuestra categoría ${CATEGORIES[p.cat]}.`,
+    desc: `${p.name} de la marca ${p.brand}. Un producto de ${p.type.toLowerCase()} de nuestra categoría ${catName(p.cat)}.`,
     specs: [],
   };
-  const specs = [["Marca", p.brand], ["Categoría", CATEGORIES[p.cat]], ["Tipo", p.type], ...info.specs];
+  const specs = [["Marca", p.brand], ["Categoría", catName(p.cat)], ["Tipo", p.type], ...info.specs];
   const out = p.stock === 0;
   const low = !out && p.stock <= 10;
   const related = PRODUCTS.filter((x) => x.id !== p.id && (x.type === p.type || x.cat === p.cat))
@@ -461,7 +473,7 @@ function viewProduct(id) {
   app.innerHTML = `
     <section class="view detail">
       <nav class="crumbs" aria-label="Ruta de navegación">
-        <a href="#/inicio">Inicio</a> › <a href="#/catalogo/${p.cat}">${CATEGORIES[p.cat]}</a> › <a href="#/catalogo/${p.cat}?tipo=${encodeURIComponent(p.type)}">${esc(p.type)}</a> › <span>${esc(p.name)}</span>
+        <a href="#/inicio">Inicio</a> › <a href="#/catalogo/${esc(p.cat)}">${esc(catName(p.cat))}</a> › <a href="#/catalogo/${p.cat}?tipo=${encodeURIComponent(p.type)}">${esc(p.type)}</a> › <span>${esc(p.name)}</span>
       </nav>
 
       <div class="detail__main">
@@ -657,7 +669,390 @@ function viewConfirmation(orderId) {
       <p>Total: <strong>${money(order.total)}</strong> · Pago: ${esc(payLabel)}</p>
       <p>Lo enviaremos a ${esc(order.customer.address)}, ${esc(order.customer.city)}. Te escribiremos a ${esc(order.customer.email)}.</p>
       <a class="btn-soft" href="#/inicio">Volver al inicio</a>
+      ${user && user.token ? `<a class="btn-soft" href="#/pedidos">Ver mis pedidos</a>` : ""}
     </section>`;
+}
+
+/* ---- Mis pedidos ---- */
+const ORDER_STATUS = { pendiente: "Pendiente", pagado: "Pagado", enviado: "Enviado", entregado: "Entregado", cancelado: "Cancelado" };
+const ORDER_RANK = { pendiente: 0, pagado: 1, enviado: 2, entregado: 3 };
+const TIMELINE = [
+  { key: "pendiente", label: "Pedido recibido" },
+  { key: "pagado", label: "Pago confirmado" },
+  { key: "enviado", label: "En camino" },
+  { key: "entregado", label: "Entregado" },
+];
+const PAY_LABEL = { tarjeta: "Tarjeta", pse: "PSE", contraentrega: "Contra entrega" };
+
+// Línea de tiempo del estado. En contra entrega no hay paso de "pago confirmado": se paga al recibir.
+function orderTimeline(o) {
+  if (o.status === "cancelado") return `<p class="order-cancelled">Este pedido fue cancelado.</p>`;
+  const steps = TIMELINE.filter((s) => !(o.pay === "contraentrega" && s.key === "pagado"));
+  const rank = ORDER_RANK[o.status];
+  const lastDone = steps.reduce((acc, s, i) => (ORDER_RANK[s.key] <= rank ? i : acc), -1);
+  return `<ol class="timeline" aria-label="Estado del pedido">${steps.map((s, i) =>
+    `<li class="tl-step${i <= lastDone ? " tl-done" : ""}${i === lastDone ? " tl-current" : ""}"${i === lastDone ? ' aria-current="step"' : ""}>
+       <span class="tl-dot" aria-hidden="true">${i <= lastDone ? "✓" : ""}</span><span class="tl-label">${s.label}</span>
+     </li>`).join("")}</ol>`;
+}
+
+function orderCard(o) {
+  const date = new Date(o.date).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+  const canCancel = o.status === "pendiente" || o.status === "pagado";
+  return `
+    <article class="order-card">
+      <header class="order-head">
+        <div><h2>Pedido <span class="order-no">${esc(o.id)}</span></h2><p class="order-date">${date}</p></div>
+        <span class="order-status order-status--${esc(o.status)}">${ORDER_STATUS[o.status] || esc(o.status)}</span>
+      </header>
+      ${orderTimeline(o)}
+      <ul class="order-items">${o.items.map((i) => `<li><span>${esc(i.name)} × ${i.qty}</span><span>${money(i.price * i.qty)}</span></li>`).join("")}</ul>
+      <dl class="order-totals">
+        <div><dt>Subtotal</dt><dd>${money(o.subtotal)}</dd></div>
+        <div><dt>Envío</dt><dd>${o.shipping ? money(o.shipping) : "Gratis"}</dd></div>
+        <div class="order-total"><dt>Total</dt><dd>${money(o.total)}</dd></div>
+      </dl>
+      <p class="order-meta">Pago: ${esc(PAY_LABEL[o.pay] || o.pay)} · ${o.paymentStatus === "aprobado" ? "aprobado" : "se paga al recibir"}<br>
+        Entrega: ${esc(o.customer.address)}, ${esc(o.customer.city)}</p>
+      ${canCancel ? `<button class="btn-cancel" type="button" data-cancel="${esc(o.id)}">Cancelar pedido</button>` : ""}
+    </article>`;
+}
+
+async function viewOrders() {
+  if (isAdmin()) { navigate("#/admin/pedidos"); return; }
+  if (!user || !user.token) { navigate("#/login"); toast("Inicia sesión para ver tus pedidos"); return; }
+  app.innerHTML = `<section class="view orders"><h1>Mis pedidos</h1><p class="orders-empty">Cargando tus pedidos…</p></section>`;
+
+  let orders;
+  try {
+    ({ orders } = await api("/orders/mine"));
+  } catch (error) {
+    if (currentRoute !== "pedidos") return; // el cliente ya cambió de pantalla
+    if (error.status === 401) {
+      user = null; save("mashe_user", null);
+      navigate("#/login"); toast("Tu sesión venció. Inicia sesión de nuevo.");
+      return;
+    }
+    $(".orders").innerHTML = `<h1>Mis pedidos</h1><p class="form-error">${esc(error.message)}</p>`;
+    return;
+  }
+  if (currentRoute !== "pedidos") return;
+
+  app.innerHTML = `
+    <section class="view orders">
+      <h1>Mis pedidos</h1>
+      ${orders.length
+        ? orders.map(orderCard).join("")
+        : `<div class="orders-empty"><p>Aún no tienes pedidos.</p><a class="btn-soft" href="#/inicio">Ir a comprar</a></div>`}
+    </section>`;
+  $$("[data-cancel]").forEach((b) => b.addEventListener("click", () => cancelOrder(b.dataset.cancel, b)));
+}
+
+async function cancelOrder(code, btn) {
+  if (!confirm(`¿Seguro que quieres cancelar el pedido ${code}?`)) return;
+  btn.disabled = true;
+  try {
+    await api(`/orders/${encodeURIComponent(code)}/cancel`, { method: "PATCH" });
+    toast("Pedido cancelado");
+    loadProducts().catch(() => {}); // el stock vuelve a estar disponible
+    viewOrders();
+  } catch (error) {
+    toast(error.message);
+    btn.disabled = false;
+  }
+}
+
+/* ---------- PANEL DE ADMINISTRADOR (#/admin) ---------- */
+function isAdmin() { return Boolean(user && user.token && user.role === "administrador"); }
+
+const ADMIN_TABS = [["pedidos", "Pedidos"], ["productos", "Productos"], ["categorias", "Categorías"]];
+// Mismas transiciones que valida el servidor (clase Pedido). El servidor siempre tiene la última palabra.
+const NEXT_STATES = { pendiente: ["pagado", "enviado", "cancelado"], pagado: ["enviado", "cancelado"], enviado: ["entregado"], entregado: [], cancelado: [] };
+
+let adminTab = "";
+let adminOrderFilter = "todos";
+let adminProductEditing = null;  // null | "nuevo" | id del producto que se edita
+let adminCategoryEditing = null; // null | "nueva" | clave de la categoría que se edita
+
+const stillHere = (tab) => currentRoute === "admin" && adminTab === tab; // el admin no cambió de pestaña mientras cargaba
+const adminBody = () => $("#admin-body");
+const shortDate = (d) => new Date(d).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
+
+function adminError(error) {
+  if (error.status === 401) {
+    user = null; save("mashe_user", null);
+    navigate("#/login"); toast("Tu sesión venció. Inicia sesión de nuevo.");
+  } else if (error.status === 403) {
+    navigate("#/inicio"); toast("No tienes permiso para hacer esto");
+  } else if (adminBody()) {
+    adminBody().innerHTML = `<p class="form-error">${esc(error.message)}</p>`;
+  }
+}
+
+// Recarga productos y categorías, y vuelve a dibujar el menú
+async function refreshCatalog() { await loadProducts(); renderNav(); }
+
+function viewAdmin(tab) {
+  if (!isAdmin()) { navigate("#/inicio"); toast("No tienes permiso para entrar al panel"); return; }
+  if (!ADMIN_TABS.some(([k]) => k === tab)) tab = "pedidos";
+  adminTab = tab;
+  adminProductEditing = null;
+  adminCategoryEditing = null;
+
+  app.innerHTML = `
+    <section class="view admin">
+      <h1>Panel de administración</h1>
+      <nav class="admin-tabs" aria-label="Secciones del panel">
+        ${ADMIN_TABS.map(([k, n]) => `<a href="#/admin/${k}" class="${k === tab ? "active" : ""}"${k === tab ? ' aria-current="page"' : ""}>${n}</a>`).join("")}
+      </nav>
+      <div id="admin-body"><p class="admin-empty">Cargando…</p></div>
+    </section>`;
+  ({ pedidos: adminOrders, productos: adminProducts, categorias: adminCategories })[tab]();
+}
+
+/* ---- Pedidos ---- */
+async function adminOrders() {
+  let orders;
+  try { ({ orders } = await api("/orders")); } catch (error) { if (stillHere("pedidos")) adminError(error); return; }
+  if (!stillHere("pedidos")) return;
+
+  const list = adminOrderFilter === "todos" ? orders : orders.filter((o) => o.status === adminOrderFilter);
+  adminBody().innerHTML = `
+    <div class="admin-bar">
+      <label>Estado
+        <select id="order-filter">
+          <option value="todos">Todos (${orders.length})</option>
+          ${Object.entries(ORDER_STATUS).map(([k, n]) => `<option value="${k}"${k === adminOrderFilter ? " selected" : ""}>${n} (${orders.filter((o) => o.status === k).length})</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    ${list.length ? `
+      <div class="admin-table-wrap"><table class="admin-table">
+        <thead><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Pago</th><th>Total</th><th>Estado</th></tr></thead>
+        <tbody>${list.map(adminOrderRow).join("")}</tbody>
+      </table></div>` : `<p class="admin-empty">No hay pedidos con ese estado.</p>`}`;
+
+  $("#order-filter").addEventListener("change", (e) => { adminOrderFilter = e.target.value; adminOrders(); });
+  $$(".state-select").forEach((s) => s.addEventListener("change", () => s.value && changeOrderState(s.dataset.order, s.value)));
+}
+
+function adminOrderRow(o) {
+  const next = NEXT_STATES[o.status] || [];
+  return `<tr>
+    <td data-label="Pedido"><div class="cell"><strong>${esc(o.id)}</strong><br><small>${o.items.length} producto(s)</small></div></td>
+    <td data-label="Fecha"><div class="cell">${shortDate(o.date)}</div></td>
+    <td data-label="Cliente"><div class="cell">${esc(o.customer.name)}<br><small>${esc(o.customer.email)} · ${esc(o.customer.city)}</small></div></td>
+    <td data-label="Pago"><div class="cell">${esc(PAY_LABEL[o.pay] || o.pay)}<br><small>${esc(o.paymentStatus)}</small></div></td>
+    <td data-label="Total"><div class="cell">${money(o.total)}</div></td>
+    <td data-label="Estado"><div class="cell">${next.length
+      ? `<select class="state-select" data-order="${esc(o.id)}" aria-label="Cambiar el estado del pedido ${esc(o.id)}">
+           <option value="">${ORDER_STATUS[o.status]}</option>
+           ${next.map((s) => `<option value="${s}">→ ${ORDER_STATUS[s]}</option>`).join("")}
+         </select>`
+      : `<span class="order-status order-status--${esc(o.status)}">${ORDER_STATUS[o.status] || esc(o.status)}</span>`}</div></td>
+  </tr>`;
+}
+
+async function changeOrderState(code, state) {
+  const extra = state === "cancelado" ? " Las unidades vuelven al inventario." : "";
+  if (!confirm(`¿Cambiar el pedido ${code} a “${ORDER_STATUS[state]}”?${extra}`)) { adminOrders(); return; }
+  try {
+    await api(`/orders/${encodeURIComponent(code)}/status`, { method: "PATCH", body: { status: state } });
+    toast("Estado actualizado");
+    if (state === "cancelado") loadProducts().catch(() => {}); // el stock volvió a la tienda
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) { adminError(error); return; }
+    toast(error.message);
+  }
+  if (stillHere("pedidos")) adminOrders();
+}
+
+/* ---- Productos ---- */
+async function adminProducts() {
+  try { await loadProducts(); } catch (error) { if (stillHere("productos")) adminError(error); return; }
+  if (stillHere("productos")) renderAdminProducts();
+}
+
+function productForm(p) {
+  const isNew = adminProductEditing === "nuevo";
+  const v = (k, d = "") => esc(p[k] ?? d);
+  return `
+    <form class="admin-form" id="product-form" novalidate>
+      <h2>${isNew ? "Nuevo producto" : `Editar producto n.º ${p.id}`}</h2>
+      <div class="admin-grid">
+        <label>Nombre<input name="name" maxlength="120" value="${v("name")}"></label>
+        <label>Categoría
+          <select name="cat">${Object.entries(CATEGORIES).map(([k, n]) => `<option value="${esc(k)}"${k === p.cat ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>
+        </label>
+        <label>Tipo<input name="type" value="${v("type")}" placeholder="Ej. Pinturas"></label>
+        <label>Marca<input name="brand" value="${v("brand")}"></label>
+        <label>Precio (COP)<input name="price" type="number" min="0" step="1" value="${v("price")}"></label>
+        <label>Cantidad en inventario<input name="stock" type="number" min="0" step="1" value="${v("stock", 0)}"></label>
+        <label class="wide">Imagen (ruta)<input name="image" value="${v("image")}" placeholder="img/oleos.jpg"></label>
+        <label class="wide">Descripción<textarea name="desc" rows="3">${esc(p.desc ?? "")}</textarea></label>
+        <label class="check"><input type="checkbox" name="best"${p.best ? " checked" : ""}> Mostrar en “Los más vendidos”</label>
+      </div>
+      <p class="form-error" id="product-error" role="alert"></p>
+      <div class="admin-actions">
+        <button class="btn-soft" type="submit">${isNew ? "Crear producto" : "Guardar cambios"}</button>
+        <button class="btn-ghost" type="button" id="product-cancel">Cancelar</button>
+      </div>
+    </form>`;
+}
+
+function renderAdminProducts() {
+  const editing = adminProductEditing === "nuevo" ? {} : PRODUCTS.find((p) => p.id === adminProductEditing);
+  adminBody().innerHTML = `
+    <div class="admin-bar"><button class="btn-soft" id="new-product" type="button">+ Nuevo producto</button></div>
+    ${adminProductEditing !== null && editing ? productForm(editing) : ""}
+    <div class="admin-table-wrap"><table class="admin-table">
+      <thead><tr><th>N.º</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Inventario</th><th></th></tr></thead>
+      <tbody>${PRODUCTS.map((p) => `<tr>
+        <td data-label="N.º"><div class="cell">${p.id}</div></td>
+        <td data-label="Producto"><div class="cell"><strong>${esc(p.name)}</strong><br><small>${esc(p.brand)} · ${esc(p.type)}</small></div></td>
+        <td data-label="Categoría"><div class="cell">${esc(catName(p.cat))}</div></td>
+        <td data-label="Precio"><div class="cell">${money(p.price)}</div></td>
+        <td data-label="Inventario"><div class="cell">${p.stock === 0 ? `<span class="stock-out">Agotado</span>` : p.stock}</div></td>
+        <td><button class="btn-small" type="button" data-edit-product="${p.id}">Editar</button></td>
+      </tr>`).join("")}</tbody>
+    </table></div>`;
+
+  $("#new-product").addEventListener("click", () => { adminProductEditing = "nuevo"; renderAdminProducts(); focusForm("#product-form"); });
+  $$("[data-edit-product]").forEach((b) => b.addEventListener("click", () => {
+    adminProductEditing = Number(b.dataset.editProduct);
+    renderAdminProducts();
+    focusForm("#product-form");
+  }));
+  const form = $("#product-form");
+  if (!form) return;
+  $("#product-cancel").addEventListener("click", () => { adminProductEditing = null; renderAdminProducts(); });
+  form.addEventListener("submit", saveProduct);
+}
+
+function focusForm(sel) {
+  const f = $(sel);
+  if (f) { f.scrollIntoView({ block: "start" }); f.querySelector("input")?.focus(); }
+}
+
+async function saveProduct(e) {
+  e.preventDefault();
+  const form = e.target;
+  const f = new FormData(form);
+  const err = $("#product-error");
+  const body = {
+    name: f.get("name").trim(), cat: f.get("cat"), type: f.get("type").trim(), brand: f.get("brand").trim(),
+    price: Number(f.get("price")), stock: Number(f.get("stock")),
+    image: f.get("image").trim(), desc: f.get("desc").trim(), best: f.get("best") === "on",
+  };
+  if (!body.name || !body.type || !body.brand) { err.textContent = "Completa el nombre, el tipo y la marca."; return; }
+  if (f.get("price").trim() === "" || !Number.isFinite(body.price) || body.price < 0) { err.textContent = "El precio debe ser un número positivo."; return; }
+  if (f.get("stock").trim() === "" || !Number.isInteger(body.stock) || body.stock < 0) { err.textContent = "El inventario debe ser un número entero, mínimo 0."; return; }
+  err.textContent = "";
+
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  const isNew = adminProductEditing === "nuevo";
+  try {
+    await api(isNew ? "/products" : `/products/${adminProductEditing}`, { method: isNew ? "POST" : "PATCH", body });
+    toast(isNew ? "Producto creado" : "Producto actualizado");
+    adminProductEditing = null;
+    await loadProducts();
+    if (stillHere("productos")) renderAdminProducts();
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) { adminError(error); return; }
+    err.textContent = error.message;
+    btn.disabled = false;
+  }
+}
+
+/* ---- Categorías ---- */
+async function adminCategories() {
+  let categories;
+  try { ({ categories } = await api("/categories")); } catch (error) { if (stillHere("categorias")) adminError(error); return; }
+  if (stillHere("categorias")) renderAdminCategories(categories);
+}
+
+function renderAdminCategories(categories) {
+  const isNew = adminCategoryEditing === "nueva";
+  const editing = isNew ? {} : categories.find((c) => c.key === adminCategoryEditing);
+  adminBody().innerHTML = `
+    <div class="admin-bar"><button class="btn-soft" id="new-category" type="button">+ Nueva categoría</button></div>
+    ${adminCategoryEditing !== null && editing ? `
+      <form class="admin-form" id="category-form" novalidate>
+        <h2>${isNew ? "Nueva categoría" : `Editar “${esc(editing.name)}”`}</h2>
+        <div class="admin-grid">
+          <label>Nombre<input name="name" maxlength="40" value="${esc(editing.name ?? "")}"></label>
+          <label class="wide">Descripción<textarea name="description" rows="2" maxlength="200">${esc(editing.description ?? "")}</textarea></label>
+        </div>
+        <p class="form-error" id="category-error" role="alert"></p>
+        <div class="admin-actions">
+          <button class="btn-soft" type="submit">${isNew ? "Crear categoría" : "Guardar cambios"}</button>
+          <button class="btn-ghost" type="button" id="category-cancel">Cancelar</button>
+        </div>
+      </form>` : ""}
+    ${categories.length ? `
+      <div class="admin-table-wrap"><table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Productos</th><th></th></tr></thead>
+        <tbody>${categories.map((c) => `<tr>
+          <td data-label="Nombre"><div class="cell"><strong>${esc(c.name)}</strong><br><small>${esc(c.key)}</small></div></td>
+          <td data-label="Descripción"><div class="cell">${esc(c.description) || "—"}</div></td>
+          <td data-label="Productos"><div class="cell">${c.productCount}</div></td>
+          <td class="admin-row-actions">
+            <button class="btn-small" type="button" data-edit-category="${esc(c.key)}">Editar</button>
+            <button class="btn-small btn-small--danger" type="button" data-delete-category="${esc(c.key)}"
+              ${c.productCount ? 'disabled title="Tiene productos: muévelos a otra categoría primero"' : ""}>Eliminar</button>
+          </td>
+        </tr>`).join("")}</tbody>
+      </table></div>` : `<p class="admin-empty">Todavía no hay categorías.</p>`}`;
+
+  $("#new-category").addEventListener("click", () => { adminCategoryEditing = "nueva"; renderAdminCategories(categories); focusForm("#category-form"); });
+  $$("[data-edit-category]").forEach((b) => b.addEventListener("click", () => {
+    adminCategoryEditing = b.dataset.editCategory;
+    renderAdminCategories(categories);
+    focusForm("#category-form");
+  }));
+  $$("[data-delete-category]").forEach((b) => b.addEventListener("click", () => deleteCategory(b.dataset.deleteCategory)));
+  if ($("#category-form")) {
+    $("#category-cancel").addEventListener("click", () => { adminCategoryEditing = null; renderAdminCategories(categories); });
+    $("#category-form").addEventListener("submit", saveCategory);
+  }
+}
+
+async function saveCategory(e) {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const err = $("#category-error");
+  const body = { name: f.get("name").trim(), description: f.get("description").trim() };
+  if (body.name.length < 2) { err.textContent = "El nombre debe tener al menos 2 caracteres."; return; }
+  err.textContent = "";
+
+  const btn = e.target.querySelector('[type="submit"]');
+  btn.disabled = true;
+  const isNew = adminCategoryEditing === "nueva";
+  try {
+    await api(isNew ? "/categories" : `/categories/${encodeURIComponent(adminCategoryEditing)}`, { method: isNew ? "POST" : "PATCH", body });
+    toast(isNew ? "Categoría creada" : "Categoría actualizada");
+    adminCategoryEditing = null;
+    await refreshCatalog(); // el menú de la tienda se actualiza solo
+    if (stillHere("categorias")) adminCategories();
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) { adminError(error); return; }
+    err.textContent = error.message;
+    btn.disabled = false;
+  }
+}
+
+async function deleteCategory(key) {
+  if (!confirm(`¿Eliminar la categoría “${catName(key)}”?`)) return;
+  try {
+    await api(`/categories/${encodeURIComponent(key)}`, { method: "DELETE" });
+    toast("Categoría eliminada");
+    await refreshCatalog();
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) { adminError(error); return; }
+    toast(error.message);
+  }
+  if (stillHere("categorias")) adminCategories();
 }
 
 /* ---------- 8. ROUTER (por hash: #/inicio, #/catalogo/arte …) ---------- */
@@ -691,8 +1086,8 @@ function route() {
     case "registro": viewAuth("registro"); break;
     case "inicio": viewHome(); break;
     case "catalogo": {
-      const cat = CATEGORIES[parts[1]] ? parts[1] : "arte";
-      viewCatalog({ title: CATEGORIES[cat], base: PRODUCTS.filter((p) => p.cat === cat), preset: params.get("tipo") });
+      const cat = CATEGORIES[parts[1]] ? parts[1] : (Object.keys(CATEGORIES)[0] || "arte");
+      viewCatalog({ title: catName(cat), base: PRODUCTS.filter((p) => p.cat === cat), preset: params.get("tipo") });
       break;
     }
     case "buscar": {
@@ -707,6 +1102,8 @@ function route() {
     case "faq": viewFaq(); break;
     case "pago": renderCheckout(); break;
     case "confirmacion": viewConfirmation(parts[1]); break;
+    case "pedidos": viewOrders(); break;
+    case "admin": viewAdmin(parts[1]); break;
     default: navigate("#/inicio");
   }
 }
@@ -739,5 +1136,6 @@ window.addEventListener("hashchange", route);
     $("#app").innerHTML = `<section class="view faq"><h1>No pudimos cargar los productos</h1><p>${esc(error.message)}</p><p>Revisa que el servidor esté encendido y recarga la página.</p></section>`;
     return;
   }
+  renderNav();
   route();
 })();

@@ -30,6 +30,7 @@ Navegador (frontend) ──HTTP──▶ Rutas ─▶ Controladores ─▶ Servi
 - `Usuario.js`: `#contrasenaHash` es privado; el hash solo sale por `datosParaGuardar()` y nunca por `aPublico()`.
 - `Pedido.js`: `#estado` y `#envio` privados; el estado solo cambia con `actualizarEstado()` o `cancelar()`, que aplican la tabla de transiciones.
 - `Carrito.js`: la colección de detalles es privada; se manipula con `agregarProducto()`, `modificarCantidad()`, etc.
+- `Categoria.js`: la `clave` (por ejemplo `arte`) es de solo lectura, porque los productos se refieren a ella; solo se pueden editar el nombre y la descripción con `editar()`.
 
 **Herencia**
 - `Usuario` ← `Cliente`, `Administrador`
@@ -55,6 +56,9 @@ Navegador (frontend) ──HTTP──▶ Rutas ─▶ Controladores ─▶ Servi
 | Envío $9.000, gratis desde $150.000 | `Pedido` |
 | El precio del pedido es el del momento de la compra | `DetalleCarrito` / `DetallePedido` |
 | Estados válidos del pedido y cancelación | `Pedido` |
+| Una categoría con productos no se puede eliminar | `Categoria.verificarEliminable()` |
+| El nombre de la categoría genera su clave (`Útiles Escolares` → `utiles-escolares`) y no se repite | `Categoria.crearClave()`, `CategoriaService.crear()` |
+| Un producto solo puede pertenecer a una categoría que exista | `ProductoService` |
 | Contraseña de 6 a 50 caracteres y encriptada | `Usuario` |
 | Cliente y administrador tienen permisos distintos | `Cliente`, `Administrador` |
 | Resultado del pago según el método | `PagoTarjeta`, `PagoPSE`, `PagoContraEntrega` |
@@ -66,14 +70,14 @@ Navegador (frontend) ──HTTP──▶ Rutas ─▶ Controladores ─▶ Servi
 | Clase del dominio | Modelo / colección | Notas |
 |---|---|---|
 | `Usuario`, `Cliente`, `Administrador` | `User` / `users` | El campo `role` decide la clase al leer (`crearUsuario`) |
-| `Producto` | `Product` / `products` | `specs` va embebido |
+| `Producto` | `Product` / `products` | `specs` va embebido; `cat` guarda la clave de la categoría |
+| `Categoria` | `Category` / `categories` | `key` (única), `name`, `description` |
 | `Carrito`, `DetalleCarrito` | *(sin colección)* | El carrito vive en el navegador; al comprar se reconstruye en el servidor y se valida |
 | `Pedido`, `DetallePedido` | `Order` / `orders` | Los detalles van **embebidos** en `items` (con nombre y precio del momento) |
 | `Pago`, `MetodoPago` | `Order.payment` | `{ method, status }` embebido en el pedido |
 | `DatosEntrega` | `Order.customer` | Embebido en el pedido |
-| `Categoria` | *(pendiente)* | Hoy las categorías son una lista fija en `Producto` (`CATEGORIAS`) |
 
-Relaciones en MongoDB: `orders.user` referencia a `users._id` (nulo si compró como invitado) y cada ítem de `orders.items` guarda `productId`, que corresponde a `products.id`.
+Relaciones en MongoDB: `orders.user` referencia a `users._id` (nulo si compró como invitado), cada ítem de `orders.items` guarda `productId` (que corresponde a `products.id`) y `products.cat` referencia a `categories.key`.
 
 ## 5. Requisitos del documento ↔ implementación
 
@@ -88,9 +92,9 @@ Relaciones en MongoDB: `orders.user` referencia a `users._id` (nulo si compró c
 | R7 | Generar pedido | `PedidoService.crearPedido`, `Pedido.desdeCarrito` | `POST /orders` |
 | R8 | Realizar pago (simulado) | `MetodoPago` y subclases | `POST /orders` (campo `pay`) |
 | R9 | Historial de pedidos | `PedidoService.misPedidos` | `GET /orders/mine` |
-| R10 | Registrar producto | `ProductoService.crear`, `Producto` | `POST /products` (admin) |
+| R10 | Registrar producto | `ProductoService.crear`, `Producto` (valida que la categoría exista) | `POST /products` (admin) |
 | R11 | Modificar producto | `ProductoService.actualizar` | `PATCH /products/:id` (admin) |
-| R12 | Gestionar categorías | *Pendiente* (lista fija en `Producto`) | — |
+| R12 | Gestionar categorías | `CategoriaService`, `Categoria` | `GET /categories`; `POST`, `PATCH /categories/:key` y `DELETE /categories/:key` (admin) |
 | R13 | Gestionar inventario | `Producto.actualizarStock/establecerStock`, `reservarStock` | `PATCH /products/:id` (admin) y automático al comprar o cancelar |
 | R14 | Gestionar pedidos | `PedidoService.listarTodos/cambiarEstado` | `GET /orders`, `PATCH /orders/:code/status` (admin) |
 | R15 | Control de acceso por rol | `Usuario.puede`, `requirePermiso` | middleware en las rutas |
@@ -137,6 +141,16 @@ classDiagram
         +reservar(cantidad)
         +devolver(cantidad)
     }
+
+    class Categoria {
+        -clave
+        -nombre
+        -descripcion
+        +crearClave(nombre)$
+        +editar(nombre, descripcion)
+        +verificarEliminable(cantidadProductos)
+    }
+    Categoria "1" --> "*" Producto : clasifica
 
     class Carrito {
         -detalles
@@ -216,10 +230,11 @@ classDiagram
 
 ## 7. Pruebas
 
-`npm test` ejecuta 35 pruebas automáticas, sin necesidad de MongoDB:
+`npm test` ejecuta 46 pruebas automáticas, sin necesidad de MongoDB:
 
-- `src/test/dominio.test.js`: herencia y polimorfismo de usuarios y pagos, encapsulamiento del stock, carrito, envío, estados y cancelación del pedido.
+- `src/test/dominio.test.js`: herencia y polimorfismo de usuarios y pagos, encapsulamiento del stock, carrito, envío, estados y cancelación del pedido, y la clase `Categoria`.
 - `src/test/pedido.service.test.js`: flujo completo de compra con repositorios en memoria: descuento de inventario, total, pago aprobado o rechazado, falta de stock, cancelación con devolución de stock, cambio de estados por el administrador y aislamiento entre clientes.
+- `src/test/categoria.service.test.js`: crear, editar y eliminar categorías (con la regla de no eliminar si tienen productos) y la validación de categoría al crear o editar productos.
 
 ### Prueba de integración manual (evidencia con capturas)
 
@@ -233,3 +248,6 @@ classDiagram
 8. `POST /orders` con una cantidad mayor al stock → 409.
 9. `PATCH /orders/:code/cancel` → 200 y el stock se devuelve.
 10. Con un token de cliente, `POST /products` → 403. Con un administrador → 201.
+11. `GET /categories` → 3 categorías con su `productCount`.
+12. Como administrador, `POST /categories` con `{ "name": "Manualidades" }` → 201 y clave `manualidades`. Repetirlo → 409.
+13. `DELETE /categories/arte` → 409 (tiene productos). `DELETE /categories/manualidades` → 200.

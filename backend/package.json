@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/scripts/seed.js",
-    "test": "node --test --test-reporter=spec"
+    "test": "node --test --test-reporter=spec",
+    "seed:categorias": "node src/scripts/seed-categorias.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
