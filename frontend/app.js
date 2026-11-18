@@ -737,6 +737,9 @@ function orderCard(o) {
 async function viewOrders() {
   if (isAdmin()) { navigate("#/admin/pedidos"); return; }
   if (!user || !user.token) { navigate("#/login"); toast("Inicia sesión para ver tus pedidos"); return; }
+
+ connectOrdersSocket();
+   
   app.innerHTML = `<section class="view orders"><h1>Mis pedidos</h1><p class="orders-empty">Cargando tus pedidos…</p></section>`;
 
   let orders;
@@ -1143,7 +1146,14 @@ document.addEventListener("click", (e) => {
   $$("details.dd[open]").forEach((d) => { if (!d.contains(e.target)) d.removeAttribute("open"); });
 });
 
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", () => {
+  if (location.hash !== "#/pedidos") {
+    ordersSocket?.disconnect();
+    ordersSocket = undefined;
+  }
+
+  route();
+});
 
 (async function init() {
   try {
