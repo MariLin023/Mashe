@@ -718,6 +718,22 @@ function orderCard(o) {
     </article>`;
 }
 
+   let ordersSocket;
+   function connectOrdersSocket() {
+     if (ordersSocket || typeof window.io !== "function") return;
+   
+     ordersSocket = window.io(new URL(API).origin, {
+       auth: { token: user.token }
+     });
+   
+     const refreshOrders = () => {
+       if (currentRoute === "pedidos" && user?.token) viewOrders();
+     };
+   
+     ordersSocket.on("connect", refreshOrders);
+     ordersSocket.on("pedido:actualizado", refreshOrders);
+}
+
 async function viewOrders() {
   if (isAdmin()) { navigate("#/admin/pedidos"); return; }
   if (!user || !user.token) { navigate("#/login"); toast("Inicia sesión para ver tus pedidos"); return; }
