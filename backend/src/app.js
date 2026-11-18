@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { fileURLToPath } from "node:url";
 
 import { controllers } from "./container.js";
 import rutasUsuario from "./routes/user.route.js";
@@ -12,6 +13,8 @@ const app = express(); // create an express app
 
 app.use(cors()); // para que el frontend (otro puerto) pueda llamar a la API
 app.use(express.json());
+const frontendDir = fileURLToPath(new URL("../../frontend/", import.meta.url));
+app.use(express.static(frontendDir));
 
 app.get("/api/v1/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/v1/users", rutasUsuario(controllers.usuario));

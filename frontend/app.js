@@ -6,7 +6,7 @@
 
 /* ---------- 1. DATOS Y CONEXIÓN CON LA API ---------- */
 // URL del backend. En producción cámbiala por la dirección donde publiques la API.
-const API = "http://localhost:4000/api/v1";
+const API = "/api/v1";
 
 // Los productos ya no se escriben aquí: vienen de la base de datos (GET /products)
 let PRODUCTS = [];
@@ -722,7 +722,7 @@ function orderCard(o) {
    function connectOrdersSocket() {
      if (ordersSocket || typeof window.io !== "function") return;
    
-     ordersSocket = window.io(new URL(API).origin, {
+     ordersSocket = window.io({
        auth: { token: user.token }
      });
    
@@ -730,8 +730,19 @@ function orderCard(o) {
        if (currentRoute === "pedidos" && user?.token) viewOrders();
      };
    
-     ordersSocket.on("connect", refreshOrders);
-     ordersSocket.on("pedido:actualizado", refreshOrders);
+      ordersSocket.on("connect", () => {
+      console.log("Socket conectado");
+      refreshOrders();
+    });
+
+    ordersSocket.on("connect_error", (error) => {
+      console.error("Error del socket:", error.message);
+    });
+
+    ordersSocket.on("pedido:actualizado", () => {
+      console.log("Aviso de pedido recibido");
+      refreshOrders();
+    });
 }
 
 async function viewOrders() {
