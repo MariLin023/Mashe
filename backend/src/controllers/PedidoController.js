@@ -32,6 +32,9 @@ export class PedidoController {
 
     cambiarEstado = async (req, res) => {
         const pedido = await this.servicio.cambiarEstado({ codigo: req.params.code, estado: req.body?.status });
+        if (pedido.clienteId != null) {
+            req.app.get("io")?.to(`cliente:${pedido.clienteId}`).emit("pedido:actualizado");
+        }
         res.json({ message: "Estado actualizado", order: pedido });
     };
 }
