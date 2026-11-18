@@ -8,7 +8,7 @@ const leerToken = (req) => {
 };
 
 // Del token reconstruye el objeto de la clase correcta (Cliente o Administrador)
-const usuarioDelToken = (token) => {
+export const usuarioDelToken = (token) => {
     const datos = jwt.verify(token, process.env.JWT_SECRET);
     return crearUsuario({ id: datos.id, nombre: datos.nombre, correo: datos.correo, rol: datos.rol });
 };
